@@ -1,0 +1,12 @@
+{
+	"name": "yannamadfdlksals",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "https://yannamadfdlkgen2.dfs.core.windows.net/",
+			"encryptedCredential": "ew0KICAiVmVyc2lvbiI6ICIyMDE3LTExLTMwIiwNCiAgIlByb3RlY3Rpb25Nb2RlIjogIktleSIsDQogICJTZWNyZXRDb250ZW50VHlwZSI6ICJQbGFpbnRleHQiLA0KICAiQ3JlZGVudGlhbElkIjogIkRBVEFGQUNUT1JZQDAwQUNBQkVCLTFGRjctNDA1NS05Rjk2LTI3MzdCNjI1RTFFN18yMjc5YjkyYi04ZjRmLTQ0NWQtYWQxZi1hMWU1MTlmZDI2ZDciDQp9"
+		}
+	}
+}
