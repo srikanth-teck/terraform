@@ -7,17 +7,33 @@
 			"metadata": "Data Factory name",
 			"defaultValue": "adf-yannam"
 		},
-		"yannamadfsals_connectionString": {
-			"type": "secureString",
-			"metadata": "Secure string for 'connectionString' of 'yannamadfsals'"
-		},
 		"yannamadfdlksals_accountKey": {
 			"type": "secureString",
 			"metadata": "Secure string for 'accountKey' of 'yannamadfdlksals'"
 		},
+		"yannamadfsals_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'yannamadfsals'"
+		},
+		"covid_eu_http_ls_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://opendata.ecdc.europa.eu"
+		},
 		"yannamadfdlksals_properties_typeProperties_url": {
 			"type": "string",
 			"defaultValue": "https://yannamadfdlkgen2.dfs.core.windows.net/"
+		},
+		"trigger-sc_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c48564fc-efbd-4ccb-af21-b591537f3f1a/resourceGroups/rg-dev-cus-log-archive-logs/providers/Microsoft.Storage/storageAccounts/yannamadfsa"
+		},
+		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_SourceRelativeURL": {
+			"type": "string",
+			"defaultValue": "en/publications-data/covid-19-data-14-day-age-notification-rate-new-cases"
+		},
+		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_sinkfileName": {
+			"type": "string",
+			"defaultValue": "hospi_data.csv"
 		}
 	},
 	"variables": {
@@ -25,14 +41,16 @@
 	},
 	"resources": [
 		{
-			"name": "[concat(parameters('factoryName'), '/yannamadfsals')]",
+			"name": "[concat(parameters('factoryName'), '/covid_eu_http_ls')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"annotations": [],
-				"type": "AzureBlobStorage",
+				"type": "HttpServer",
 				"typeProperties": {
-					"connectionString": "[parameters('yannamadfsals_connectionString')]"
+					"url": "[parameters('covid_eu_http_ls_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
 				}
 			},
 			"dependsOn": []
@@ -53,6 +71,91 @@
 				}
 			},
 			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/yannamadfsals')]",
+			"type": "Microsoft.DataFactory/factories/linkedServices",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobStorage",
+				"typeProperties": {
+					"connectionString": "[parameters('yannamadfsals_connectionString')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/covid_ds_for_dlkgen2')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "yannamadfdlksals",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"fileName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().fileName",
+							"type": "Expression"
+						},
+						"folderPath": "ecdc",
+						"fileSystem": "raw"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/yannamadfdlksals')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/covid_euls_ds')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "covid_eu_http_ls",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"RelativeURL": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "HttpServerLocation",
+						"relativeUrl": {
+							"value": "@dataset().RelativeURL",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/covid_eu_http_ls')]"
+			]
 		},
 		{
 			"name": "[concat(parameters('factoryName'), '/populationdatasetsource')]",
@@ -112,18 +215,18 @@
 			]
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/yannamadf_pipeline')]",
+			"name": "[concat(parameters('factoryName'), '/plfor_covid_deaths_ingest')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "adfpipeline_copy",
+						"name": "covid_data_copy_fromhttp",
 						"type": "Copy",
 						"dependsOn": [],
 						"policy": {
-							"timeout": "0.00:05:00",
-							"retry": 0,
+							"timeout": "0.00:01:00",
+							"retry": 2,
 							"retryIntervalInSeconds": 30,
 							"secureOutput": false,
 							"secureInput": false
@@ -133,9 +236,9 @@
 							"source": {
 								"type": "DelimitedTextSource",
 								"storeSettings": {
-									"type": "AzureBlobStorageReadSettings",
-									"recursive": true,
-									"enablePartitionDiscovery": false
+									"type": "HttpReadSettings",
+									"requestMethod": "GET",
+									"requestTimeout": ""
 								},
 								"formatSettings": {
 									"type": "DelimitedTextReadSettings"
@@ -164,18 +267,251 @@
 						},
 						"inputs": [
 							{
-								"referenceName": "populationdatasetsource",
+								"referenceName": "covid_euls_ds",
 								"type": "DatasetReference",
-								"parameters": {}
+								"parameters": {
+									"RelativeURL": {
+										"value": "@pipeline().parameters.SourceRelativeURL",
+										"type": "Expression"
+									}
+								}
 							}
 						],
 						"outputs": [
 							{
-								"referenceName": "yannamadfdlkgends",
+								"referenceName": "covid_ds_for_dlkgen2",
 								"type": "DatasetReference",
-								"parameters": {}
+								"parameters": {
+									"fileName": {
+										"value": "@pipeline().parameters.sinkfileName",
+										"type": "Expression"
+									}
+								}
 							}
 						]
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"parameters": {
+					"SourceRelativeURL": {
+						"type": "string"
+					},
+					"sinkfileName": {
+						"type": "string"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/covid_euls_ds')]",
+				"[concat(variables('factoryId'), '/datasets/covid_ds_for_dlkgen2')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/yannamadf_pipeline')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "check if file exists",
+						"type": "Validation",
+						"dependsOn": [],
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "populationdatasetsource",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"timeout": "0.00:00:30",
+							"sleep": 10,
+							"minimumSize": 1024
+						}
+					},
+					{
+						"name": "Get Metadata of file",
+						"type": "GetMetadata",
+						"dependsOn": [
+							{
+								"activity": "check if file exists",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "populationdatasetsource",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"fieldList": [
+								"columnCount",
+								"exists",
+								"size"
+							],
+							"storeSettings": {
+								"type": "AzureBlobStorageReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "DelimitedTextReadSettings"
+							}
+						}
+					},
+					{
+						"name": "column count",
+						"type": "IfCondition",
+						"dependsOn": [
+							{
+								"activity": "Get Metadata of file",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"expression": {
+								"value": "@equals(activity('Get Metadata of file').output.columnCount,14)",
+								"type": "Expression"
+							},
+							"ifFalseActivities": [
+								{
+									"name": "Web1",
+									"type": "WebActivity",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"url": "https://dummy.com",
+										"method": "POST",
+										"headers": {},
+										"body": "dummy url provided"
+									}
+								}
+							],
+							"ifTrueActivities": [
+								{
+									"name": "adfpipeline_copy_copy1",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.00:05:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "DelimitedTextSource",
+											"storeSettings": {
+												"type": "AzureBlobStorageReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "DelimitedTextReadSettings"
+											}
+										},
+										"sink": {
+											"type": "DelimitedTextSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "DelimitedTextWriteSettings",
+												"quoteAllText": true,
+												"fileExtension": ".txt"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "populationdatasetsource",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "yannamadfdlkgends",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									]
+								},
+								{
+									"name": "Delete1",
+									"type": "Delete",
+									"dependsOn": [
+										{
+											"activity": "adfpipeline_copy_copy1",
+											"dependencyConditions": [
+												"Succeeded"
+											]
+										}
+									],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"dataset": {
+											"referenceName": "yannamadfdlkgends",
+											"type": "DatasetReference",
+											"parameters": {}
+										},
+										"logStorageSettings": {
+											"linkedServiceName": {
+												"referenceName": "yannamadfdlksals",
+												"type": "LinkedServiceReference"
+											}
+										},
+										"enableLogging": true,
+										"storeSettings": {
+											"type": "AzureBlobFSReadSettings",
+											"recursive": true,
+											"enablePartitionDiscovery": false
+										}
+									}
+								}
+							]
+						}
 					}
 				],
 				"policy": {
@@ -186,7 +522,72 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/datasets/populationdatasetsource')]",
-				"[concat(variables('factoryId'), '/datasets/yannamadfdlkgends')]"
+				"[concat(variables('factoryId'), '/datasets/yannamadfdlkgends')]",
+				"[concat(variables('factoryId'), '/linkedServices/yannamadfdlksals')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger-sc')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "yannamadf_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathEndsWith": ".csv",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('trigger-sc_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobDeleted",
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/yannamadf_pipeline')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/hospidata_trigger')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "plfor_covid_deaths_ingest",
+							"type": "PipelineReference"
+						},
+						"parameters": {
+							"SourceRelativeURL": "[parameters('hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_SourceRelativeURL')]",
+							"sinkfileName": "[parameters('hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_sinkfileName')]"
+						}
+					}
+				],
+				"type": "ScheduleTrigger",
+				"typeProperties": {
+					"recurrence": {
+						"frequency": "Minute",
+						"interval": 15,
+						"startTime": "2022-08-12T00:28:00Z",
+						"timeZone": "UTC"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/plfor_covid_deaths_ingest')]"
 			]
 		}
 	]

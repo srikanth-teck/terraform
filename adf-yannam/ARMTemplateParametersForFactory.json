@@ -5,14 +5,26 @@
 		"factoryName": {
 			"value": "adf-yannam"
 		},
-		"yannamadfsals_connectionString": {
-			"value": ""
-		},
 		"yannamadfdlksals_accountKey": {
 			"value": ""
 		},
+		"yannamadfsals_connectionString": {
+			"value": ""
+		},
+		"covid_eu_http_ls_properties_typeProperties_url": {
+			"value": "https://opendata.ecdc.europa.eu"
+		},
 		"yannamadfdlksals_properties_typeProperties_url": {
 			"value": "https://yannamadfdlkgen2.dfs.core.windows.net/"
+		},
+		"trigger-sc_properties_typeProperties_scope": {
+			"value": "/subscriptions/c48564fc-efbd-4ccb-af21-b591537f3f1a/resourceGroups/rg-dev-cus-log-archive-logs/providers/Microsoft.Storage/storageAccounts/yannamadfsa"
+		},
+		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_SourceRelativeURL": {
+			"value": "en/publications-data/covid-19-data-14-day-age-notification-rate-new-cases"
+		},
+		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_sinkfileName": {
+			"value": "hospi_data.csv"
 		}
 	}
 }
