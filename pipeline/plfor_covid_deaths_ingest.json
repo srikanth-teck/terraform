@@ -1,0 +1,66 @@
+{
+	"name": "plfor_covid_deaths_ingest",
+	"properties": {
+		"activities": [
+			{
+				"name": "covid_data_copy_fromhttp",
+				"type": "Copy",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.00:01:00",
+					"retry": 2,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "DelimitedTextSource",
+						"storeSettings": {
+							"type": "HttpReadSettings",
+							"requestMethod": "GET",
+							"requestTimeout": ""
+						},
+						"formatSettings": {
+							"type": "DelimitedTextReadSettings"
+						}
+					},
+					"sink": {
+						"type": "DelimitedTextSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "DelimitedTextWriteSettings",
+							"quoteAllText": true,
+							"fileExtension": ".txt"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "covid_euls_ds",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "covid_ds_for_dlkgen2",
+						"type": "DatasetReference"
+					}
+				]
+			}
+		],
+		"annotations": []
+	}
+}
