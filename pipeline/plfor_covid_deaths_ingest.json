@@ -50,17 +50,37 @@
 				"inputs": [
 					{
 						"referenceName": "covid_euls_ds",
-						"type": "DatasetReference"
+						"type": "DatasetReference",
+						"parameters": {
+							"RelativeURL": {
+								"value": "@pipeline().parameters.SourceRelativeURL",
+								"type": "Expression"
+							}
+						}
 					}
 				],
 				"outputs": [
 					{
 						"referenceName": "covid_ds_for_dlkgen2",
-						"type": "DatasetReference"
+						"type": "DatasetReference",
+						"parameters": {
+							"fileName": {
+								"value": "@pipeline().parameters.sinkfileName",
+								"type": "Expression"
+							}
+						}
 					}
 				]
 			}
 		],
+		"parameters": {
+			"SourceRelativeURL": {
+				"type": "string"
+			},
+			"sinkfileName": {
+				"type": "string"
+			}
+		},
 		"annotations": []
 	}
 }

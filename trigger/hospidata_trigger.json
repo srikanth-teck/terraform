@@ -3,7 +3,18 @@
 	"properties": {
 		"annotations": [],
 		"runtimeState": "Stopped",
-		"pipelines": [],
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "plfor_covid_deaths_ingest",
+					"type": "PipelineReference"
+				},
+				"parameters": {
+					"SourceRelativeURL": "en/publications-data/covid-19-data-14-day-age-notification-rate-new-cases",
+					"sinkfileName": "hospi_data.csv"
+				}
+			}
+		],
 		"type": "ScheduleTrigger",
 		"typeProperties": {
 			"recurrence": {
