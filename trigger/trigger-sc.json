@@ -1,0 +1,17 @@
+{
+	"name": "trigger-sc",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [],
+		"type": "BlobEventsTrigger",
+		"typeProperties": {
+			"ignoreEmptyBlobs": true,
+			"scope": "/subscriptions/c48564fc-efbd-4ccb-af21-b591537f3f1a/resourceGroups/rg-dev-cus-log-archive-logs/providers/Microsoft.Storage/storageAccounts/yannamadfsa",
+			"events": [
+				"Microsoft.Storage.BlobDeleted",
+				"Microsoft.Storage.BlobCreated"
+			]
+		}
+	}
+}
