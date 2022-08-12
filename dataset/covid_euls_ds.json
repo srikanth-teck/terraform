@@ -1,0 +1,22 @@
+{
+	"name": "covid_euls_ds",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "covid_eu_http_ls",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "HttpServerLocation",
+				"relativeUrl": "/covid19/nationalcasedeath/csv"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
