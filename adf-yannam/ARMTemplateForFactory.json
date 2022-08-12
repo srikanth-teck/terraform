@@ -23,10 +23,6 @@
 			"type": "string",
 			"defaultValue": "https://yannamadfdlkgen2.dfs.core.windows.net/"
 		},
-		"trigger-sc_properties_typeProperties_scope": {
-			"type": "string",
-			"defaultValue": "/subscriptions/c48564fc-efbd-4ccb-af21-b591537f3f1a/resourceGroups/rg-dev-cus-log-archive-logs/providers/Microsoft.Storage/storageAccounts/yannamadfsa"
-		},
 		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_SourceRelativeURL": {
 			"type": "string",
 			"defaultValue": "en/publications-data/covid-19-data-14-day-age-notification-rate-new-cases"
@@ -34,12 +30,105 @@
 		"hospidata_trigger_properties_plfor_covid_deaths_ingest_parameters_sinkfileName": {
 			"type": "string",
 			"defaultValue": "hospi_data.csv"
+		},
+		"trigger-sc_properties_typeProperties_scope": {
+			"type": "string",
+			"defaultValue": "/subscriptions/c48564fc-efbd-4ccb-af21-b591537f3f1a/resourceGroups/rg-dev-cus-log-archive-logs/providers/Microsoft.Storage/storageAccounts/yannamadfsa"
 		}
 	},
 	"variables": {
 		"factoryId": "[concat('Microsoft.DataFactory/factories/', parameters('factoryName'))]"
 	},
 	"resources": [
+		{
+			"name": "[concat(parameters('factoryName'), '/lookup_foreach_test')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "lookup_foreach",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "JsonSource",
+								"storeSettings": {
+									"type": "AzureBlobStorageReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "JsonReadSettings"
+								}
+							},
+							"dataset": {
+								"referenceName": "ecdc_filelist_for_lookup",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "lookup_foreach_list",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "lookup_foreach",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('lookup_foreach').output.value",
+								"type": "Expression"
+							},
+							"isSequential": true,
+							"activities": [
+								{
+									"name": "Set variable1",
+									"type": "SetVariable",
+									"dependsOn": [],
+									"userProperties": [],
+									"typeProperties": {
+										"variableName": "sourceRelativeURL",
+										"value": {
+											"value": "@item().SourceRelativeURL",
+											"type": "Expression"
+										}
+									}
+								}
+							]
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {},
+					"cancelAfter": {}
+				},
+				"variables": {
+					"sourceRelativeURL": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ecdc_filelist_for_lookup')]"
+			]
+		},
 		{
 			"name": "[concat(parameters('factoryName'), '/plfor_covid_deaths_ingest')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
@@ -425,6 +514,30 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/ecdc_filelist_for_lookup')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "yannamadfsals",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": "ecdc_file_list_for_2_files.json",
+						"container": "configs"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/yannamadfsals')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/populationdatasetsource')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -527,37 +640,6 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/trigger-sc')]",
-			"type": "Microsoft.DataFactory/factories/triggers",
-			"apiVersion": "2018-06-01",
-			"properties": {
-				"annotations": [],
-				"runtimeState": "Stopped",
-				"pipelines": [
-					{
-						"pipelineReference": {
-							"referenceName": "yannamadf_pipeline",
-							"type": "PipelineReference"
-						},
-						"parameters": {}
-					}
-				],
-				"type": "BlobEventsTrigger",
-				"typeProperties": {
-					"blobPathEndsWith": ".csv",
-					"ignoreEmptyBlobs": true,
-					"scope": "[parameters('trigger-sc_properties_typeProperties_scope')]",
-					"events": [
-						"Microsoft.Storage.BlobDeleted",
-						"Microsoft.Storage.BlobCreated"
-					]
-				}
-			},
-			"dependsOn": [
-				"[concat(variables('factoryId'), '/pipelines/yannamadf_pipeline')]"
-			]
-		},
-		{
 			"name": "[concat(parameters('factoryName'), '/hospidata_trigger')]",
 			"type": "Microsoft.DataFactory/factories/triggers",
 			"apiVersion": "2018-06-01",
@@ -588,6 +670,37 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/plfor_covid_deaths_ingest')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/trigger-sc')]",
+			"type": "Microsoft.DataFactory/factories/triggers",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"annotations": [],
+				"runtimeState": "Stopped",
+				"pipelines": [
+					{
+						"pipelineReference": {
+							"referenceName": "yannamadf_pipeline",
+							"type": "PipelineReference"
+						},
+						"parameters": {}
+					}
+				],
+				"type": "BlobEventsTrigger",
+				"typeProperties": {
+					"blobPathEndsWith": ".csv",
+					"ignoreEmptyBlobs": true,
+					"scope": "[parameters('trigger-sc_properties_typeProperties_scope')]",
+					"events": [
+						"Microsoft.Storage.BlobDeleted",
+						"Microsoft.Storage.BlobCreated"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/yannamadf_pipeline')]"
 			]
 		}
 	]
