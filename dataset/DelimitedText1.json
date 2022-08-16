@@ -1,5 +1,5 @@
 {
-	"name": "hospiadmds",
+	"name": "DelimitedText1",
 	"properties": {
 		"linkedServiceName": {
 			"referenceName": "yannamadfdlksals",
@@ -10,7 +10,7 @@
 		"typeProperties": {
 			"location": {
 				"type": "AzureBlobFSLocation",
-				"fileName": "hospital_admissions.csv",
+				"fileName": "cases_deaths.csv",
 				"folderPath": "ecdc",
 				"fileSystem": "raw"
 			},
@@ -25,7 +25,23 @@
 				"type": "String"
 			},
 			{
+				"name": "country_code",
+				"type": "String"
+			},
+			{
+				"name": "continent",
+				"type": "String"
+			},
+			{
+				"name": "population",
+				"type": "String"
+			},
+			{
 				"name": "indicator",
+				"type": "String"
+			},
+			{
+				"name": "daily_count",
 				"type": "String"
 			},
 			{
@@ -33,19 +49,11 @@
 				"type": "String"
 			},
 			{
-				"name": "year_week",
-				"type": "String"
-			},
-			{
-				"name": "value",
+				"name": "rate_14_day",
 				"type": "String"
 			},
 			{
 				"name": "source",
-				"type": "String"
-			},
-			{
-				"name": "url",
 				"type": "String"
 			}
 		]
